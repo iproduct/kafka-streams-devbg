@@ -56,9 +56,8 @@ public class KafkaStreamsConfig {
         stream
 //                .mapValues((ValueMapper<String, String>) String::toUpperCase)
                 .groupByKey()
-                .windowedBy(TimeWindows.of(Duration.ofMillis(4000)))
-                .reduce((String value1, String value2) -> value1 + value2,
-                        Named.as("windowStore"))
+                .windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(1000)))
+                .reduce((String value1, String value2) -> value1 + value2) //,  Named.as("windowStore"))
                 .toStream()
                 .map((windowedId, value) -> new KeyValue<>(windowedId.key(), value))
                 .filter((i, s) -> s.length() > 3)
