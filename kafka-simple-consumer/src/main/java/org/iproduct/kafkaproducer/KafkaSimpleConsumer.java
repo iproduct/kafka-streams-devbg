@@ -1,6 +1,8 @@
 package org.iproduct.kafkaproducer;
 
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.streams.kstream.Windowed;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -23,8 +25,11 @@ public class KafkaSimpleConsumer {
 //    }
 
 //    @KafkaListener(id = "myId", topics = "streamingTopic2")
-    @KafkaListener(id = "myId", topics = "minSweepDistance")
-    public void listen(String in) {
-        System.out.println(in);
+    @KafkaListener(id = "myId", topics = "minSweepDistance", batch = "false")
+    public void listen(ConsumerRecord<Integer, String> inRecord) {
+        System.out.printf("Robot %d -> %s%n", inRecord.key(), inRecord.value());
     }
 }
+
+
+
