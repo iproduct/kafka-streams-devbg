@@ -32,9 +32,9 @@ public class KafkaConsumerConfig {
         props.put(
                 ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
                 IntegerDeserializer.class);
-        props.put(
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 2000);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
