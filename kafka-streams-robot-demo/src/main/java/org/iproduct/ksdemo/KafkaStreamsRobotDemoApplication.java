@@ -1,10 +1,18 @@
 package org.iproduct.ksdemo;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.core.coap.Response;
+import org.eclipse.californium.core.config.CoapConfig;
 import org.eclipse.californium.core.network.CoapEndpoint;
+import org.iproduct.ksdemo.model.ClientData;
+import org.iproduct.ksdemo.model.Command;
+import org.iproduct.ksdemo.model.CommandAcknowledgement;
 import org.iproduct.ksdemo.service.ReactiveRobotService;
+import org.iproduct.ksdemo.service.RegisterClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
@@ -23,9 +31,8 @@ import java.net.InetSocketAddress;
 @SpringBootApplication
 @Slf4j
 public class KafkaStreamsRobotDemoApplication {
-    public static final String SERVER_IP = "192.168.1.100";
+    public static final String SERVER_IP = "192.168.0.17";
     public static final int COAP_PORT = 5683;
-    public static final String ROBOT_IP = "192.168.1.101";
 
     @Autowired
     private KafkaTemplate<Integer, String> template;
@@ -33,6 +40,16 @@ public class KafkaStreamsRobotDemoApplication {
     @Autowired
     private ReactiveRobotService robotService;
 
+    @Autowired
+    private RegisterClientService clientService;
+
+    @Autowired
+    ObjectMapper mapper;
+
+
+    static {
+        CoapConfig.register();
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(KafkaStreamsRobotDemoApplication.class, args);
@@ -47,18 +64,23 @@ public class KafkaStreamsRobotDemoApplication {
 
             server.add(new HelloResource());
             server.add(new TimeResource());
+            server.add(new RegisterClientResource());
             server.add(new SensorsResource());
 
             server.start();
-            robotService.getCommands().asFlux().subscribe(command -> {
+            robotService.getCommands().asFlux().subscribe(commandStr -> {
                 try {
+                    Command command = mapper.readValue(commandStr, Command.class);
                     Request request = Request.newPut();
-                    request.setURI("coap://" + ROBOT_IP + ":5683/commands");
-                    request.setPayload(command);
+                    ClientData client = clientService.getClientData(command.getDeviceId());
+                    request.setURI("coap:/" + client.ip() + ":" + client.port() + "/commands");
+                    request.setPayload(commandStr);
                     request.send();
+                    log.info("!!! Sent command: {}", request);
                     Response response = request.waitForResponse(1000);
                     log.info("!!! Received: " + response);
-                    robotService.getSensorReadings().emitNext(String.format("{\"type\":\"command_ack\", \"command\":\"%s\"}",response.getPayloadString()), FAIL_FAST);
+                    val commandAck = new CommandAcknowledgement("command_ack", command.getDeviceId(), response.getPayloadString());
+                    robotService.getSensorReadings().emitNext(mapper.writeValueAsString(commandAck), FAIL_FAST);
                 } catch (Exception e) {
                     log.error("Error sending command to robot: {}", e);
                     robotService.getSensorReadings().emitNext(String.format("{\"error\":\"%s\"}", e.getMessage()), FAIL_FAST);
@@ -90,6 +112,43 @@ public class KafkaStreamsRobotDemoApplication {
         public void handleGET(CoapExchange exchange) {
             log.info("Received request from {}:{}", exchange.getSourceAddress(), exchange.getSourcePort());
             exchange.respond(String.valueOf(System.currentTimeMillis()));
+        }
+    }
+
+    public class RegisterClientResource extends CoapResource {
+
+        public RegisterClientResource() {
+            // resource identifier
+            super("register");
+            // set display name
+            getAttributes().setTitle("Register Client Resource");
+        }
+
+        @Override
+        public void handleGET(CoapExchange exchange) {
+            String clientId = exchange.getRequestText();
+            try {
+                exchange.respond(mapper.writeValueAsString(clientService.getClientData(clientId)));
+            } catch (JsonProcessingException e) {
+                log.error("Error getting client data: ", e);
+                exchange.respond(BAD_REQUEST, "Error getting client data");
+            }
+        }
+
+        @Override
+        public void handlePUT(CoapExchange exchange) {
+            byte[] payload = exchange.getRequestPayload();
+            log.info("Register Client: Received request: {} - {}:{}", new String(payload), exchange.getSourceAddress(), exchange.getSourcePort());
+
+            try {
+                String clientId = new String(payload, "UTF-8");
+                log.info("Registering client IP: {} - {}:{}", clientId, exchange.getSourceAddress(), exchange.getSourcePort());
+                clientService.setClientIp(clientId, exchange.getSourceAddress(), exchange.getSourcePort());
+                exchange.respond(CHANGED, clientId);
+            } catch (Exception e) {
+                e.printStackTrace();
+                exchange.respond(BAD_REQUEST, "Invalid String");
+            }
         }
     }
 

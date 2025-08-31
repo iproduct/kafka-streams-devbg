@@ -1,23 +1,37 @@
-package org.iproduct.ksdemo.websocket;
+package org.iproduct.ksdemo.web;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.HandlerMapping;
-import org.springframework.web.reactive.config.EnableWebFlux;
+import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
 import org.springframework.web.reactive.socket.WebSocketHandler;
-import org.springframework.web.reactive.socket.server.WebSocketService;
-import org.springframework.web.reactive.socket.server.support.HandshakeWebSocketService;
-import org.springframework.web.reactive.socket.server.upgrade.TomcatRequestUpgradeStrategy;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.springframework.web.reactive.function.server.RouterFunctions.route;
+
 @Configuration
-@EnableWebFlux
-public class WsConfig implements WebFluxConfigurer {
+public class WebConfig implements WebFluxConfigurer {
+    @Override
+    public void addCorsMappings(CorsRegistry corsRegistry) {
+        corsRegistry.addMapping("/**")
+                .allowedOrigins("http://allowed-origin.com")
+                .allowedMethods("PUT")
+                .maxAge(3600);
+    }
+
+    @Bean
+//    public RouterFunction<ServerResponse> htmlRouter(@Value("classpath:/templates/index.html") Resource html) {
+    public RouterFunction<ServerResponse> webHandlerMapping(IndexPageHandler indexPageHandler) {
+        return route().GET("/", indexPageHandler::getIndexPage).build();
+//        return route(GET("/"), request -> ok().contentType(MediaType.TEXT_HTML).syncBody(html));
+    }
+    
 //    @Override
 //    public WebSocketService getWebSocketService() {
 //        TomcatRequestUpgradeStrategy strategy = new TomcatRequestUpgradeStrategy();

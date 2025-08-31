@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Robot Demo</title>
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+</head>
+<body>
+<h1>Robot WebSocket</h1>
+<form action="" onsubmit="sendMessage(event)">
+    <textarea rows="20" type="text" id="messageText" style="width:80%"></textarea>
+    <button class="large">Send</button>
+</form>
+<div>Server IP: <span id="server_address" th:text="@{${@environment.getProperty('server.address') } }">localhost</span></div>
+<div>Server Port: <span id="server_port" th:text="@{${@environment.getProperty('server.port')} }">8080</span></div>
+<div>Server Scheme: <span id="server_scheme" th:text="@{${@environment.getProperty('server.scheme')} }">http</span></div>
+<div>Commands: <ul id="commands"></ul></div>
+<div>State: <ul id="state"></ul></div>
+
+<script>
+    const serverAddress = document.getElementById('server_address').innerText;
+    const serverPort = document.getElementById('server_port').innerText;
+    const serverScheme = document.getElementById('server_scheme').innerText;
+    var ws = new WebSocket(`ws://${serverAddress}:${serverPort}/ws`);
+    var sensors = document.getElementById('state')
+    var commands = document.getElementById('commands')
+    ws.onmessage = function(message) {
+        const event = JSON.parse(message.data)
+        if(event.type === 'command_ack') {
+            const li = document.createElement('li')
+            const content = document.createTextNode(JSON.stringify(event))
+            li.appendChild(content)
+            commands.appendChild(li)
+        } else if(event.type === 'state') {
+            const li = document.createElement('li')
+            const content = document.createTextNode(JSON.stringify(event))
+            li.appendChild(content)
+            sensors.appendChild(li)
+        }
+    };
+    function sendMessage(event) {
+        var input = document.getElementById("messageText")
+        ws.send(input.value)
+        // input.value = ''
+        event.preventDefault()
+    }
+
+    async function getIP() {
+        try {
+            const response = await fetch('https://api.ipify.org?format=json');
+            const data = await response.json();
+            document.getElementById('ip').innerText = data.ip;
+        } catch (error) {
+            console.error('Error fetching IP address:', error);
+        }
+    }
+
+    async function getPublicIP() {
+        try {
+            const response = await fetch('https://api.ipify.org?format=json');
+            const data = await response.json();
+            document.getElementById('ip').innerText = data.ip;
+        } catch (error) {
+            console.error('Error fetching IP address:', error);
+        }
+    }
+</script>
+</body>
+</html>
