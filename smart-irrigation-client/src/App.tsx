@@ -8,6 +8,8 @@ import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, type IoTDa
 import EchartsReact from 'echarts-for-react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router';
 import ZoneManagement from './pages/ZoneManagement';
+import { getZones } from './utils/zoneApi';
+import { type Zone } from './utils/sensorApi';
 
 const MAX_HISTORY_POINTS = 500; // Limit historical data points
 const MAX_VOLUME_DISPLAY = 100; // Max volume for display in liters, adjust as needed
@@ -18,6 +20,8 @@ function App() {
   const historicalDataRef = useRef<IoTData[]>([]);
   const [, setHistoricalDataTrigger] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zonesByValve, setZonesByValve] = useState<Map<number, Zone>>(new Map());
 
   const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
     if (
@@ -113,6 +117,29 @@ function App() {
     return () => disconnectWebSocket();
   }, []);
 
+  useEffect(() => {
+    const fetchZonesData = async () => {
+      try {
+        const zonesData = await getZones();
+        setZones(zonesData);
+      } catch (error) {
+        console.error("Error fetching zones:", error);
+      }
+    };
+    fetchZonesData();
+  }, []);
+
+  useEffect(() => {
+    const mapZonesByValve = () => {
+      const newMap = new Map<number, Zone>();
+      zones.forEach(zone => {
+        newMap.set(zone.valveNumber, zone);
+      });
+      setZonesByValve(newMap);
+    };
+    mapZonesByValve();
+  }, [zones]);
+
   const handleValveControl = (valve: number, newState: boolean) => {
     if (newState) {
       sendWebSocketMessage({ deviceId: "IR_CONTROLLER_01", command: "OPEN_VALVE", valve: valve });
@@ -124,7 +151,7 @@ function App() {
   return (
     <Router>
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static">
+        <AppBar position="fixed" sx={{ width: '100%' }}>
           <Toolbar>
             <IconButton
               size="large"
@@ -137,7 +164,7 @@ function App() {
               <MenuIcon />
             </IconButton>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              Smart Irrigation Dashboard
+              Smart Irrigation
             </Typography>
             {/* Removed direct links from AppBar */}
           </Toolbar>
@@ -171,7 +198,7 @@ function App() {
           </Box>
         </Drawer>
 
-        <Box component="main" sx={{ p: 3 }}>
+        <Box component="main" sx={{ p: 3, mt: 8 }}> {/* Added mt for spacing below AppBar */}
           <Routes>
             <Route path="/" element={(
               <Grid container spacing={3}>
@@ -185,16 +212,28 @@ function App() {
                         Current Readings
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 1 }}>
-                        Flow Volume 1: {iotData?.volume1?.toFixed(2)} L
-                        <LinearProgress variant="determinate" value={((iotData?.volume1 || 0) / MAX_VOLUME_DISPLAY) * 100} sx={{ height: 10, borderRadius: 5 }} />
+                        Flow Volume 1: {iotData?.volume1?.toFixed(2)} L / {zonesByValve.get(0)?.wateringRequirementLiters || 100} L
+                        <LinearProgress
+                          variant="determinate"
+                          value={((iotData?.volume1 || 0) / (zonesByValve.get(0)?.wateringRequirementLiters || 100)) * 100}
+                          sx={{ height: 10, borderRadius: 5 }}
+                        />
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 1 }}>
-                        Flow Volume 2: {iotData?.volume2?.toFixed(2)} L
-                        <LinearProgress variant="determinate" value={((iotData?.volume2 || 0) / MAX_VOLUME_DISPLAY) * 100} sx={{ height: 10, borderRadius: 5 }} />
+                        Flow Volume 2: {iotData?.volume2?.toFixed(2)} L / {zonesByValve.get(1)?.wateringRequirementLiters || 100} L
+                        <LinearProgress
+                          variant="determinate"
+                          value={((iotData?.volume2 || 0) / (zonesByValve.get(1)?.wateringRequirementLiters || 100)) * 100}
+                          sx={{ height: 10, borderRadius: 5 }}
+                        />
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 1 }}>
-                        Flow Volume 3: {iotData?.volume3?.toFixed(2)} L
-                        <LinearProgress variant="determinate" value={((iotData?.volume3 || 0) / MAX_VOLUME_DISPLAY) * 100} sx={{ height: 10, borderRadius: 5 }} />
+                        Flow Volume 3: {iotData?.volume3?.toFixed(2)} L / {zonesByValve.get(2)?.wateringRequirementLiters || 100} L
+                        <LinearProgress
+                          variant="determinate"
+                          value={((iotData?.volume3 || 0) / (zonesByValve.get(2)?.wateringRequirementLiters || 100)) * 100}
+                          sx={{ height: 10, borderRadius: 5 }}
+                        />
                       </Typography>
                       <Typography variant="body2" sx={{ mt: 1 }}>
                         Moisture 1: {iotData?.moist01}<br />
