@@ -43,6 +43,14 @@ export interface CommandAckMessage {
   command: string; // The command that was acknowledged, as a JSON string
 }
 
+export interface Zone {
+  id: string;
+  name: string;
+  wateringRequirementLiters: number;
+  wateringIntervalHours: number;
+  valveNumber: number;
+}
+
 export type WebSocketCommand = OpenValvesCommand | OpenValveCommand | CloseValveCommand;
 
 export type WebSocketIncomingMessage = IoTData | CommandAckMessage;

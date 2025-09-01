@@ -11,6 +11,7 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.iproduct.ksdemo.model.ClientData;
 import org.iproduct.ksdemo.model.Command;
 import org.iproduct.ksdemo.model.CommandAcknowledgement;
+import org.iproduct.ksdemo.model.IrrigationControllerState;
 import org.iproduct.ksdemo.service.ReactiveRobotService;
 import org.iproduct.ksdemo.service.RegisterClientService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -143,7 +144,7 @@ public class KafkaStreamsRobotDemoApplication {
             try {
                 String clientId = new String(payload, "UTF-8");
                 log.info("Registering client IP: {} - {}:{}", clientId, exchange.getSourceAddress(), exchange.getSourcePort());
-                clientService.setClientIp(clientId, exchange.getSourceAddress(), exchange.getSourcePort());
+                clientService.setDeviceIp(clientId, exchange.getSourceAddress(), exchange.getSourcePort());
                 exchange.respond(CHANGED, clientId);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -173,7 +174,10 @@ public class KafkaStreamsRobotDemoApplication {
 
             try {
                 value = new String(payload, "UTF-8");
-                log.info("Received request: {} - {}:{}", value, exchange.getSourceAddress(), exchange.getSourcePort());
+                IrrigationControllerState state = mapper.readValue(value, IrrigationControllerState.class);
+                log.info("Received state: {} - {}:{}", state, exchange.getSourceAddress(), exchange.getSourcePort());
+                clientService.setDeviceIp(state.deviceId(), exchange.getSourceAddress(), exchange.getSourcePort());
+                value = mapper.writeValueAsString(state);
                 robotService.getSensorReadings().emitNext(value, FAIL_FAST);
                 template.send("sweepDistances", 1, value);
                 exchange.respond(CHANGED, value);

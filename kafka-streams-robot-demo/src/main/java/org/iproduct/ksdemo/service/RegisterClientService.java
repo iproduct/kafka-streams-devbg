@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class RegisterClientService {
     private Map<String, ClientData> clients =  new ConcurrentHashMap<>();
-    public void setClientIp(String clientId, InetAddress clientIp, int clientPort) {
+    public void setDeviceIp(String clientId, InetAddress clientIp, int clientPort) {
         clients.put(clientId, new ClientData(clientId, clientIp, clientPort));
     }
     public ClientData getClientData(String clientId) {
