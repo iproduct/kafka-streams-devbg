@@ -1,5 +1,7 @@
-import { AppBar, Toolbar, Typography, IconButton, Box, Card, CardContent, Grid, Button, LinearProgress } from '@mui/material';
+import { AppBar, Toolbar, Typography, IconButton, Box, Card, CardContent, Grid, Button, LinearProgress, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import SettingsIcon from '@mui/icons-material/Settings';
 import './App.css';
 import { useState, useEffect, useRef } from 'react';
 import { connectWebSocket, disconnectWebSocket, sendWebSocketMessage, type IoTData, type WebSocketIncomingMessage } from './utils/sensorApi';
@@ -14,7 +16,19 @@ function App() {
   const [iotData, setIotData] = useState<IoTData | null>(null);
   const [commandAck, setCommandAck] = useState<string | null>(null);
   const historicalDataRef = useRef<IoTData[]>([]);
-  const [, setHistoricalDataTrigger] = useState(0); // Dummy state to trigger re-renders
+  const [, setHistoricalDataTrigger] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
+    if (
+      event.type === 'keydown' &&
+      ((event as React.KeyboardEvent).key === 'Tab' ||
+        (event as React.KeyboardEvent).key === 'Shift')
+    ) {
+      return;
+    }
+    setDrawerOpen(open);
+  };
 
   const flowChartOptions = {
     title: {
@@ -116,22 +130,47 @@ function App() {
               size="large"
               edge="start"
               color="inherit"
-              aria-label="menu"
+              aria-label="open drawer"
               sx={{ mr: 2 }}
+              onClick={toggleDrawer(true)}
             >
               <MenuIcon />
             </IconButton>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               Smart Irrigation Dashboard
             </Typography>
-            <Button color="inherit" component={Link} to="/">
-              Dashboard
-            </Button>
-            <Button color="inherit" component={Link} to="/zones">
-              Zone Management
-            </Button>
+            {/* Removed direct links from AppBar */}
           </Toolbar>
         </AppBar>
+
+        <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
+          <Box
+            sx={{ width: 250 }}
+            role="presentation"
+            onClick={toggleDrawer(false)}
+            onKeyDown={toggleDrawer(false)}
+          >
+            <List>
+              <ListItem disablePadding>
+                <ListItemButton component={Link} to="/">
+                  <ListItemIcon>
+                    <DashboardIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Dashboard" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton component={Link} to="/zones">
+                  <ListItemIcon>
+                    <SettingsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Zone Management" />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Box>
+        </Drawer>
+
         <Box component="main" sx={{ p: 3 }}>
           <Routes>
             <Route path="/" element={(
