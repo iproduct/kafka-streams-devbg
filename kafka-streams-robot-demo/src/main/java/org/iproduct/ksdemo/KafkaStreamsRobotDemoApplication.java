@@ -112,7 +112,7 @@ public class KafkaStreamsRobotDemoApplication {
         @Override
         public void handleGET(CoapExchange exchange) {
             log.info("Received request from {}:{}", exchange.getSourceAddress(), exchange.getSourcePort());
-            exchange.respond(String.valueOf(System.currentTimeMillis()));
+            exchange.respond("{\"type\":\"time\", \"time\":\"" + String.valueOf(System.currentTimeMillis()) + "\"}");
         }
     }
 

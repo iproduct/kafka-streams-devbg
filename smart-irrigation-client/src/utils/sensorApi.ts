@@ -7,16 +7,12 @@ export interface SensorData {
 export interface IoTData {
   type: "state";
   time: number;
+  start_time: number;
   deviceId: string;
   valves: number[];
-  flow1: number;
-  flow2: number;
-  flow3: number;
-  moist01: number;
-  moist02: number;
-  volume1: number;
-  volume2: number;
-  volume3: number;
+  flows: number[];
+  moists: number[];
+  volumes: number[];
 }
 
 export interface OpenValveCommand {
@@ -76,9 +72,10 @@ export const connectWebSocket = (onMessage: (data: WebSocketIncomingMessage) => 
       if (parsedData.type === "state") {
         const iotDataWithVolume: IoTData = {
           ...parsedData,
-          volume1: parsedData.flow1 / 396.0,
-          volume2: parsedData.flow2 / 396.0,
-          volume3: parsedData.flow3 / 396.0,
+          time: parsedData.time + parsedData.start_time,
+          flows: parsedData.flows || [],
+          moists: parsedData.moists || [],
+          volumes: (parsedData.flows || []).map((flow: number) => flow / 396.0),
         };
         onMessage(iotDataWithVolume as IoTData);
       } else if (parsedData.type === "command_ack") {

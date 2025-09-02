@@ -54,17 +54,17 @@ function App() {
       {
         name: 'Flow 1',
         type: 'line',
-        data: historicalDataRef.current.map(data => data.volume1),
+        data: historicalDataRef.current.map(data => data.volumes[0]),
       },
       {
         name: 'Flow 2',
         type: 'line',
-        data: historicalDataRef.current.map(data => data.volume2),
+        data: historicalDataRef.current.map(data => data.volumes[1]),
       },
       {
         name: 'Flow 3',
         type: 'line',
-        data: historicalDataRef.current.map(data => data.volume3),
+        data: historicalDataRef.current.map(data => data.volumes[2]),
       },
     ],
   };
@@ -85,18 +85,11 @@ function App() {
       type: 'value',
       name: 'Moisture Level',
     },
-    series: [
-      {
-        name: 'Moisture 1',
-        type: 'line',
-        data: historicalDataRef.current.map(data => data.moist01),
-      },
-      {
-        name: 'Moisture 2',
-        type: 'line',
-        data: historicalDataRef.current.map(data => data.moist02),
-      },
-    ],
+    series: iotData?.moists.map((_, index) => ({
+      name: `Moisture ${index + 1}`,
+      type: 'line',
+      data: historicalDataRef.current.map(data => data.moists[index]),
+    })) || [],
   };
 
   useEffect(() => {
@@ -211,34 +204,24 @@ function App() {
                       <Typography sx={{ mb: 1.5 }} color="text.secondary">
                         Current Readings
                       </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        Flow Volume 1: {iotData?.volume1?.toFixed(2)} L / {zonesByValve.get(0)?.wateringRequirementLiters || 100} L
-                        <LinearProgress
-                          variant="determinate"
-                          value={((iotData?.volume1 || 0) / (zonesByValve.get(0)?.wateringRequirementLiters || 100)) * 100}
-                          sx={{ height: 10, borderRadius: 5 }}
-                        />
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        Flow Volume 2: {iotData?.volume2?.toFixed(2)} L / {zonesByValve.get(1)?.wateringRequirementLiters || 100} L
-                        <LinearProgress
-                          variant="determinate"
-                          value={((iotData?.volume2 || 0) / (zonesByValve.get(1)?.wateringRequirementLiters || 100)) * 100}
-                          sx={{ height: 10, borderRadius: 5 }}
-                        />
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        Flow Volume 3: {iotData?.volume3?.toFixed(2)} L / {zonesByValve.get(2)?.wateringRequirementLiters || 100} L
-                        <LinearProgress
-                          variant="determinate"
-                          value={((iotData?.volume3 || 0) / (zonesByValve.get(2)?.wateringRequirementLiters || 100)) * 100}
-                          sx={{ height: 10, borderRadius: 5 }}
-                        />
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        Moisture 1: {iotData?.moist01}<br />
-                        Moisture 2: {iotData?.moist02}<br />
-                      </Typography>
+                      {iotData?.volumes.map((volume, index) => {
+                        const wateringRequirement = zonesByValve.get(index)?.wateringRequirementLiters || 100;
+                        return (
+                          <Typography variant="body2" sx={{ mt: 1 }} key={`flow-${index}`}>
+                            Flow Volume {index + 1}: {volume?.toFixed(2)} L / {wateringRequirement} L
+                            <LinearProgress
+                              variant="determinate"
+                              value={((volume || 0) / wateringRequirement) * 100}
+                              sx={{ height: 10, borderRadius: 5 }}
+                            />
+                          </Typography>
+                        );
+                      })}
+                      {iotData?.moists.map((moist, index) => (
+                        <Typography variant="body2" sx={{ mt: 1 }} key={`moist-${index}`}>
+                          Moisture {index + 1}: {moist}<br />
+                        </Typography>
+                      ))}
                     </CardContent>
                   </Card>
                 </Grid>
